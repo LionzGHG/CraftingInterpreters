@@ -1,6 +1,7 @@
 use core::str;
 use std::{fs, io::{self, BufRead, Write}, path::Path};
 
+use parser::{ast::Expr, Parser};
 use scanner::{tokens::Token, Scanner};
 
 pub mod scanner;
@@ -49,6 +50,10 @@ fn run_prompt() {
 fn run(source: String) {
     let mut scanner: Scanner = Scanner::new(source);
     let tokens: Vec<Token> = scanner.scan_tokens();
+    let mut parser: Parser = Parser::new(tokens.clone());
+    let expression: Expr = parser.parse();
+
+    println!("{expression:?}");
 
     for token in &tokens {
         println!("{token}");

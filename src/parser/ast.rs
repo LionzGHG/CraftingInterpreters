@@ -1,4 +1,4 @@
-use crate::scanner::tokens::{Token, TokenType};
+use crate::scanner::tokens::{CloneAny, Token, TokenType};
 
 
 #[derive(Clone, Debug)]
@@ -14,7 +14,7 @@ pub enum Operator {
 
 #[derive(Clone, Debug)]
 pub enum Expr {
-    Literal(f64),
+    Literal(Box<dyn CloneAny>),
     Grouping(Box<Self>),
     Unary(Operator, Box<Self>),
     Binary(Box<Self>, Operator, Box<Self>)
@@ -23,9 +23,9 @@ pub enum Expr {
 #[test]
 fn test_expr() {
     let expression: Expr = Expr::Binary(
-        Box::new(Expr::Unary(Operator::Minus, Box::new(Expr::Literal(123.)))),
+        Box::new(Expr::Unary(Operator::Minus, Box::new(Expr::Literal(Box::new(123.))))),
         Operator::Multiply,
-        Box::new(Expr::Grouping(Box::new(Expr::Literal(45.67))))
+        Box::new(Expr::Grouping(Box::new(Expr::Literal(Box::new(45.67)))))
     );
 
     println!("{expression:?}");
