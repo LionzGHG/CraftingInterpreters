@@ -4,6 +4,7 @@ use std::{fs, io::{self, BufRead, Write}, path::Path};
 use scanner::{tokens::Token, Scanner};
 
 pub mod scanner;
+pub mod parser;
 
 fn main() {
     let mut args: Vec<String> = std::env::args().collect();

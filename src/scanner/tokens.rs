@@ -44,7 +44,7 @@ impl Clone for Box<dyn CloneAny> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Token {
     pub type_: TokenType,
     pub lexeme: String,

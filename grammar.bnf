@@ -1,0 +1,6 @@
+expression -> literal | unary | binary | grouping ;
+litral -> NUMBER | STRING | "true" | "false" | "null" ;
+grouping -> "(" expression ")" ;
+unary -> ( "-" | "!" ) expression ;
+binary -> expression operator expression ;
+operator -> "==" | "!=" | "<=" | ">=" | "<" | ">" | "+" | "*" | "/" | "-" ;
