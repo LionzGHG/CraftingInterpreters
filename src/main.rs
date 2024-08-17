@@ -1,10 +1,9 @@
-use core::str;
-use std::{fs, io::{self, BufRead, Write}, path::Path};
+use std::{fs, io::{self, stdin, BufRead, BufReader}};
 
-use parser::{ast::Expr, Parser};
-use scanner::{tokens::Token, Scanner};
+use lexer::{tokens::Token, Lexer};
+use parser::{ast::Expr, ast_printer::AstPrinter, Parser};
 
-pub mod scanner;
+pub mod lexer;
 pub mod parser;
 
 fn main() {
@@ -12,59 +11,54 @@ fn main() {
     args.remove(0);
 
     if args.len() > 1 {
-        println!("Usage: rlox [script]");
-        std::process::exit(64);
+        println!("Usage: rogue [script]");
+        std::process::exit(64)
     } else if args.len() == 1 {
-        run_file(args[0].clone()).expect("Failed to run file");
+        run_file(&args[0]).expect("Failed to run file");
     } else {
         run_prompt();
     }
 }
 
-fn run_file(path: String) -> io::Result<()> {
-    let bytes: Vec<u8> = fs::read(Path::new(&path))?;
-    let contents: &str = str::from_utf8(&bytes).expect("Failed to convert bytes to string.");
-    run(contents.to_string());
+fn run_file(path: &str) -> io::Result<()> {
+    let bytes: Vec<u8> = fs::read(path)?;
+    run(String::from_utf8(bytes).unwrap());
     Ok(())
 }
 
 fn run_prompt() {
-    let stdin: io::Stdin = io::stdin();
-    let mut reader: io::StdinLock<'_> = stdin.lock();
+    let input: std::io::Stdin = stdin();
+    let mut reader: BufReader<std::io::Stdin> = BufReader::new(input);
 
     loop {
         print!("> ");
-        io::stdout().flush().expect("Failed to flush stdout");
-
-        let mut line: String = String::new();
-        let bytes_read: usize = reader.read_line(&mut line).expect("Failed to read line");
-
-        if bytes_read == 0 {
-            break; // End of input
+        
+        let mut buffer: String = String::new();
+        match reader.read_line(&mut buffer) {
+            Ok(0) => break,
+            Ok(_) => {},
+            Err(_) => break,
         }
 
-        run(line.trim().to_string());
+        run(buffer);
     }
 }
 
 fn run(source: String) {
-    let mut scanner: Scanner = Scanner::new(source);
-    let tokens: Vec<Token> = scanner.scan_tokens();
-    let mut parser: Parser = Parser::new(tokens.clone());
-    let expression: Expr = parser.parse();
-
-    println!("{expression:?}");
+    let mut lexer: Lexer = Lexer::new(source);
+    let tokens: Vec<Token> = lexer.tokenize();
 
     for token in &tokens {
-        println!("{token}");
+        println!("{token:?}");
     }
+
+    let mut parser: Parser = Parser::new(tokens);
+    let expr: Box<dyn Expr> = parser.parse();
+
+    println!("expr = {}", AstPrinter().print(&*expr));
 }
 
-pub fn error(line: usize, msg: &str) -> ! {
-    report(line, "", msg)
+pub fn report(line: usize, where_: &str, msg: &str) -> ! {
+    println!("[line {line}] Error {where_}: {msg}");
+    std::process::exit(65)
 }
-
-fn report(line: usize, where_: &str, msg: &str) -> ! {
-    panic!("[line {line}] Error {where_}: {msg}.")
-}
-

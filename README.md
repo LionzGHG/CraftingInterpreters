@@ -1,2 +1,4 @@
-# CraftingInterpreters
-Rust Interpreter for the Lox-Language based on the creating interpreters book in Java by Robert Nystrom: https://craftinginterpreters.com.
+
+# Rust Interpreter
+
+Rust Interpreter following the [Crafting Interpreters Series](https://craftinginterpreters.com/parsing-expressions.html).
