@@ -5,6 +5,8 @@ use std::{collections::HashMap, fmt::Debug};
 
 use tokens::{Token, TokenType};
 
+use crate::util::Object;
+
 fn error(line: usize, msg: &str) -> ! {
     crate::report(line, "", msg)
 }
@@ -108,9 +110,9 @@ impl Lexer {
         self.add_token_lit(type_, None);
     }
 
-    fn add_token_lit(&mut self, type_: TokenType, literal: Option<String>) {
+    fn add_token_lit(&mut self, type_: TokenType, literal: Option<Box<dyn Object>>) {
         let text: String = self.source[self.start..self.current].to_string();
-        self.tokens.push(Token::new(type_, text, literal, self.line));
+        self.tokens.push(Token::new(type_, text, Some(Box::new(literal)), self.line));
     }
 
     fn expect(&mut self, expected: char) -> bool {
@@ -221,7 +223,7 @@ impl Lexer {
         self.next();
 
         let value: String = self.source[(self.start + 1)..(self.current - 1)].to_string();
-        self.add_token_lit(TokenType::String, Some(value));
+        self.add_token_lit(TokenType::String, Some(Box::new(value)));
     }
 
     fn number(&mut self) {
@@ -239,7 +241,7 @@ impl Lexer {
         }
 
         let value: String = self.source[self.start..self.current].to_string();
-        self.add_token_lit(TokenType::Number, Some(value));
+        self.add_token_lit(TokenType::Number, Some(Box::new(value.parse::<f64>())));
     }
 
     fn identifier(&mut self) {

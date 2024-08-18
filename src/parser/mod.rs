@@ -140,11 +140,11 @@ impl Parser {
 
     fn primary(&mut self) -> Box<dyn Expr> {
         if self.expect(&[TokenType::False]) {
-            return Box::new(Literal::new(Some(false.to_string())));
+            return Box::new(Literal::new(Some(Box::new(false))));
         }
 
         if self.expect(&[TokenType::True]) {
-            return Box::new(Literal::new(Some(true.to_string())));
+            return Box::new(Literal::new(Some(Box::new(true))));
         }
 
         if self.expect(&[TokenType::Number, TokenType::String]) {

@@ -1,16 +1,15 @@
-use std::fmt::Debug;
 
-use crate::lexer::tokens::Token;
+use crate::{lexer::tokens::Token, util::Object};
 
 pub trait Visitor {
-    fn visit_binary(&self, binary: &Binary) -> String;
-    fn visit_grouping(&self, grouping: &Grouping) -> String;
-    fn visit_literal(&self, literal: &Literal) -> String;
-    fn visit_unary(&self, unary: &Unary) -> String;
+    fn visit_binary(&self, binary: &Binary) -> Box<dyn Object>;
+    fn visit_grouping(&self, grouping: &Grouping) -> Box<dyn Object>;
+    fn visit_literal(&self, literal: &Literal) -> Box<dyn Object>;
+    fn visit_unary(&self, unary: &Unary) -> Box<dyn Object>;
 }
 
 pub trait Expr {
-    fn accept(&self, visitor: &dyn Visitor) -> String;
+    fn accept(&self, visitor: &dyn Visitor) -> Box<dyn Object>;
 }
 
 #[derive()]
@@ -27,7 +26,7 @@ impl Binary {
 }
 
 impl Expr for Binary {
-    fn accept(&self, visitor: &dyn Visitor) -> String {
+    fn accept(&self, visitor: &dyn Visitor) -> Box<dyn Object> {
         visitor.visit_binary(self)
     }
 }
@@ -42,22 +41,22 @@ impl Grouping {
     }
 }
 impl Expr for Grouping {
-    fn accept(&self, visitor: &dyn Visitor) -> String {
+    fn accept(&self, visitor: &dyn Visitor) -> Box<dyn Object> {
         visitor.visit_grouping(self)
     }
 }
 
 pub struct Literal {
-    pub value: Option<String>,
+    pub value: Option<Box<dyn Object>>,
 }
 
 impl Literal {
-    pub fn new(value: Option<String>) -> Self {
+    pub fn new(value: Option<Box<dyn Object>>) -> Self {
         Self { value }
     }
 }
 impl Expr for Literal {
-    fn accept(&self, visitor: &dyn Visitor) -> String {
+    fn accept(&self, visitor: &dyn Visitor) -> Box<dyn Object> {
         visitor.visit_literal(self)
     }
 }
@@ -73,7 +72,7 @@ impl Unary {
     }
 }
 impl Expr for Unary {
-    fn accept(&self, visitor: &dyn Visitor) -> String {
+    fn accept(&self, visitor: &dyn Visitor) -> Box<dyn Object> {
         visitor.visit_unary(self)
     }
 }

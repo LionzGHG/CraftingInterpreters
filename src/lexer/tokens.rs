@@ -1,6 +1,8 @@
 
 use core::fmt;
 
+use crate::util::Object;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenType {
     LParen, RParen, LBrace, RBrace, LSquare, RSquare, Comma, Dot, Minus, Plus, Semicolon, Slash, Star,
@@ -28,7 +30,7 @@ pub enum TokenType {
 pub struct Token {
     pub type_: TokenType,
     pub lexeme: String,
-    pub literal: Option<String>,
+    pub literal: Option<Box<dyn Object>>,
     pub line: usize,
 }
 
@@ -39,7 +41,7 @@ impl fmt::Display for Token {
 }
 
 impl Token {
-    pub fn new(type_: TokenType, lexeme: String, literal: Option<String>, line: usize) -> Self {
+    pub fn new(type_: TokenType, lexeme: String, literal: Option<Box<dyn Object>>, line: usize) -> Self {
         Self { type_, lexeme, literal, line }
     }
 }

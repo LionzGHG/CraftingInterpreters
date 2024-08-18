@@ -1,99 +1,96 @@
+use crate::{lexer::tokens::{Token, TokenType}, parser::ast::{Expr, Visitor}, util::{downcast_obj, Object}};
 
-use crate::{lexer::tokens::{Token, TokenType}, parser::ast::{Expr, Visitor}};
 
 pub struct Interpreter;
 
 impl Interpreter {
-    fn evaluate(&self, expr: &dyn Expr) -> String {
+    fn evaluate(&self, expr: &dyn Expr) -> Box<dyn Object> {
         return expr.accept(self);
     }
 
-    fn is_truthy(&self, literal: String) -> String {
-        if literal == "null".to_string() {
-            return "false".to_string();
+    fn is_truthy(&self, object: &dyn Object) -> bool {
+        if let Some(value) = downcast_obj::<bool>(object).cloned() {
+            return value;
         }
-        if literal == "true".to_string() {
-            return "true".to_string();
-        }
-        if literal == "false".to_string() {
-            return "false".to_string();
-        }
-        return "true".to_string();
+        return true;
     }
 
-    fn is_not_truthy(&self, lit: String) -> String {
-        match lit.as_str() {
-            "null" => true.to_string(),
-            "true" => false.to_string(),
-            "false" => true.to_string(),
-            _ => false.to_string()
-        }
-    }
-
-    fn is_equal(&self, lhs: String, rhs: String) -> String {
-        if lhs == "null".to_string() && rhs == "null".to_string() {
-            return true.to_string();
-        }
-        if lhs == "null".to_string() {
-            return false.to_string();
-        }
-        return lhs.eq(&rhs).to_string();
-    }
-
-    fn is_not_equal(&self, lhs: String, rhs: String) -> String {
-        if lhs == "null".to_string() && rhs == "null".to_string() {
-            return false.to_string();
-        }
-        if lhs == "null".to_string() {
-            return true.to_string();
-        }
-        return lhs.ne(&rhs).to_string();
-    }
-
-    fn check_number_operand(&self, operand: Token, expr: &dyn Expr) {
-        
+    pub fn interpret(&self, expr: &dyn Expr) {
+        let value: Box<dyn Object> = self.evaluate(&*expr);
+        println!("{}", value.as_string());
     }
 }
 
-impl Visitor for Interpreter {
-    
-    fn visit_literal(&self, literal: &crate::parser::ast::Literal) -> String {
-        return literal.value.as_ref().unwrap().to_string();
-    }
-    
-    fn visit_grouping(&self, grouping: &crate::parser::ast::Grouping) -> String {
-        return self.evaluate(&*grouping);
-    }
-    
-    fn visit_unary(&self, unary: &crate::parser::ast::Unary) -> String {
-        let rhs: String = unary.accept(self);
 
-        return match unary.operator.type_ {
+impl Visitor for Interpreter {
+
+    fn visit_literal(&self, literal: &crate::parser::ast::Literal) -> Box<dyn Object> {
+        return literal.value.clone_box();
+    }
+
+    fn visit_grouping(&self, grouping: &crate::parser::ast::Grouping) -> Box<dyn Object> {
+        return self.evaluate(&*grouping.expression);
+    }
+
+    fn visit_unary(&self, unary: &crate::parser::ast::Unary) -> Box<dyn Object> {
+        let right: Box<dyn Object> = self.evaluate(&*unary.right);
+
+        match unary.operator.type_ {
             TokenType::Minus => {
-                self.check_number_operand(unary.operator.clone(), &*unary.right);
-                format!("-{rhs}")
+                if let Some(value) = downcast_obj::<f64>(&*right).cloned() {
+                    return Box::new(-value);
+                }
+                Error::number_operand(unary.operator.line);
             },
-            TokenType::Bang => self.is_not_truthy(rhs),
-            _ => panic!()
+            TokenType::Bang => {
+                return Box::new(!self.is_truthy(&*right));
+            },
+            _ => Error::unexpected_token(unary.operator.line, unary.operator.type_),
         }
     }
 
-    fn visit_binary(&self, binary: &crate::parser::ast::Binary) -> String {
-        let lhs: String = self.evaluate(&*binary.left);
-        let rhs: String = self.evaluate(&*binary.right);
+    fn visit_binary(&self, binary: &crate::parser::ast::Binary) -> Box<dyn Object> {
+        let lhs: Box<dyn Object> = self.evaluate(&*binary.left);
+        let rhs: Box<dyn Object> = self.evaluate(&*binary.right);
+
+        let x: f64 = lhs.as_f64().unwrap_or_else(|| {
+            Error::unexpected_type(binary.operator.line, &*lhs);
+        });
+        let y: f64 = rhs.as_f64().unwrap_or_else(|| {
+            Error::unexpected_type(binary.operator.line, &*rhs);
+        });
 
         return match binary.operator.type_ {
-            TokenType::Minus => format!("{lhs}-{rhs}"),
-            TokenType::Plus => format!("{lhs}+{rhs}"),
-            TokenType::Slash => format!("{lhs}/{rhs}"),
-            TokenType::Star => format!("{lhs}*{rhs}"),
-            TokenType::Greater => format!("{lhs}>{rhs}"),
-            TokenType::GreaterEqual => format!("{lhs}>={rhs}"),
-            TokenType::Less => format!("{lhs}<{rhs}"),
-            TokenType::LessEqual => format!("{lhs}<={rhs}"),
-            TokenType::BangEqual => self.is_not_equal(lhs, rhs),
-            TokenType::EqualEqual => self.is_equal(lhs, rhs),
-            _ => panic!()
+            // arithmetic
+            TokenType::Minus => Box::new(x-y),
+            TokenType::Plus => Box::new(x+y),
+            TokenType::Slash => Box::new(x/y),
+            TokenType::Star => Box::new(x*y),
+            // comparison
+            TokenType::Greater => Box::new(x>y),
+            TokenType::GreaterEqual => Box::new(x>=y),
+            TokenType::Less => Box::new(x<y),
+            TokenType::LessEqual => Box::new(x<=y),
+            TokenType::EqualEqual => Box::new(x==y),
+            TokenType::BangEqual => Box::new(x!=y),
+            // else
+            _ => Error::unexpected_token(binary.operator.line, binary.operator.type_),
         }
+    }
+}
+
+struct Error;
+
+impl Error {
+    fn number_operand(line: usize) -> ! {
+        panic!("[line {line}] Error: Expected number after Operand in Expression.");
+    }
+
+    fn unexpected_token(line: usize, token: TokenType) -> ! {
+        panic!("[line {line}] Error: Unexpected Token '{token:?}'.");
+    }
+
+    fn unexpected_type(line: usize, type_: &dyn Object) -> ! {
+        panic!("[line {line}] Error: Expected type 'float', got value of '{}'", type_.as_string());
     }
 }
