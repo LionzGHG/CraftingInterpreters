@@ -38,7 +38,7 @@ impl Lexer {
             tokens: vec![],
             start: 0,
             current: 0,
-            line: 0,
+            line: 1,
             keywords: map! {
                 "mut" => TokenType::Mut,
                 "typeof" => TokenType::Typeof,
@@ -77,7 +77,9 @@ impl Lexer {
                 "open" => TokenType::Open,
                 "override" => TokenType::Override,
                 "scene" => TokenType::Scene,
-                "import" => TokenType::Import
+                "import" => TokenType::Import,
+                "echo" => TokenType::Echo,
+                "try" => TokenType::Try
             }
         }
     }
@@ -97,7 +99,9 @@ impl Lexer {
     }
     
     fn next(&mut self) -> char {
-        self.source.chars().nth(self.current + 1).unwrap()
+        let c: char = self.source.chars().nth(self.current).unwrap();
+        self.current += 1;
+        c
     }
 
     fn add_token(&mut self, type_: TokenType) {
@@ -135,6 +139,8 @@ impl Lexer {
     }
 
     fn scan_token(&mut self) {
+        println!("Checking: {}", self.source.chars().nth(self.current).unwrap());
+
         let c: char = self.next();
         match c {
             '(' => self.add_token(TokenType::LParen),
@@ -220,6 +226,7 @@ impl Lexer {
 
     fn number(&mut self) {
         while is_digit(self.peek()) {
+            println!("current = {}", self.source.chars().nth(self.current).unwrap());
             self.next();
         }
 

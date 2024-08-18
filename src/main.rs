@@ -5,6 +5,7 @@ use parser::{ast::Expr, ast_printer::AstPrinter, Parser};
 
 pub mod lexer;
 pub mod parser;
+pub mod interpreter;
 
 fn main() {
     let mut args: Vec<String> = std::env::args().collect();
@@ -21,8 +22,15 @@ fn main() {
 }
 
 fn run_file(path: &str) -> io::Result<()> {
-    let bytes: Vec<u8> = fs::read(path)?;
-    run(String::from_utf8(bytes).unwrap());
+    if !path.contains(".rogue") {
+        let new_path: String = String::from(format!("{path}.rogue").as_str());
+        let bytes: Vec<u8> = fs::read(&new_path)?;
+        run(String::from_utf8(bytes).unwrap());
+    } 
+    else {
+        let bytes: Vec<u8> = fs::read(path)?;
+        run(String::from_utf8(bytes).unwrap());
+    }
     Ok(())
 }
 

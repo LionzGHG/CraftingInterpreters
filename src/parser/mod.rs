@@ -169,8 +169,13 @@ impl Parser {
             }
         }
 
+
+
         match self.peek().type_ {
-            TokenType::Entity | TokenType::Trait | TokenType::Set /* and the other keywords */ => {
+            TokenType::Entity | TokenType::Trait | TokenType::Set | TokenType::Catch | TokenType::If |
+            TokenType::Else | TokenType::Elif | TokenType::While | TokenType::Unreachable | TokenType::Void |
+            TokenType::Typeof | TokenType::Nameof | TokenType::Sizeof | TokenType::Echo |
+            TokenType::Todo | TokenType::Test | TokenType::Override | TokenType::Open | TokenType::Scene => {
                 return;
             },
             _ => {}

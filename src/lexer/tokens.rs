@@ -19,7 +19,7 @@ pub enum TokenType {
 
     Mut, Typeof, Sizeof, Nameof, As, Void, Use, With, Out, True, False, If, Elif, Else, While, For, 
     In, Entity, Init, New, This, Set, Enum, Throw, Catch, Pub, Priv, Prot, Unreachable, Trait, Parent, 
-    Open, Override, Scene, Import, Todo, Pass, Test,
+    Open, Override, Scene, Import, Todo, Pass, Test, Echo, Try, 
 
     EOF
 }
