@@ -1,18 +1,17 @@
 
-use crate::{lexer::tokens::Token, util::Object};
+use crate::{lexer::tokens::Token, /*util::Object*/ util::Value};
 
 pub trait Visitor {
-    fn visit_binary(&self, binary: &Binary) -> Box<dyn Object>;
-    fn visit_grouping(&self, grouping: &Grouping) -> Box<dyn Object>;
-    fn visit_literal(&self, literal: &Literal) -> Box<dyn Object>;
-    fn visit_unary(&self, unary: &Unary) -> Box<dyn Object>;
+    fn visit_binary(&self, binary: &Binary) -> Value;
+    fn visit_grouping(&self, grouping: &Grouping) -> Value;
+    fn visit_literal(&self, literal: &Literal) -> Value;
+    fn visit_unary(&self, unary: &Unary) -> Value;
 }
 
 pub trait Expr {
-    fn accept(&self, visitor: &dyn Visitor) -> Box<dyn Object>;
+    fn accept(&self, visitor: &dyn Visitor) -> Value;
 }
 
-#[derive()]
 pub struct Binary {
     pub left: Box<dyn Expr>,
     pub operator: Token,
@@ -26,7 +25,7 @@ impl Binary {
 }
 
 impl Expr for Binary {
-    fn accept(&self, visitor: &dyn Visitor) -> Box<dyn Object> {
+    fn accept(&self, visitor: &dyn Visitor) -> Value {
         visitor.visit_binary(self)
     }
 }
@@ -41,22 +40,22 @@ impl Grouping {
     }
 }
 impl Expr for Grouping {
-    fn accept(&self, visitor: &dyn Visitor) -> Box<dyn Object> {
+    fn accept(&self, visitor: &dyn Visitor) -> Value {
         visitor.visit_grouping(self)
     }
 }
 
 pub struct Literal {
-    pub value: Option<Box<dyn Object>>,
+    pub value: Option<Value>,
 }
 
 impl Literal {
-    pub fn new(value: Option<Box<dyn Object>>) -> Self {
+    pub fn new(value: Option<Value>) -> Self {
         Self { value }
     }
 }
 impl Expr for Literal {
-    fn accept(&self, visitor: &dyn Visitor) -> Box<dyn Object> {
+    fn accept(&self, visitor: &dyn Visitor) -> Value {
         visitor.visit_literal(self)
     }
 }
@@ -72,7 +71,7 @@ impl Unary {
     }
 }
 impl Expr for Unary {
-    fn accept(&self, visitor: &dyn Visitor) -> Box<dyn Object> {
+    fn accept(&self, visitor: &dyn Visitor) -> Value {
         visitor.visit_unary(self)
     }
 }

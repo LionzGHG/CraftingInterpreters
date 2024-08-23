@@ -1,4 +1,5 @@
-use crate::util::Object;
+// use crate::util::Object;
+use crate::util::Value;
 
 use super::ast::{Expr, Visitor};
 
@@ -6,11 +7,11 @@ use super::ast::{Expr, Visitor};
 pub struct AstPrinter();
 
 impl AstPrinter {
-    pub fn print(&self, expr: &dyn Expr) -> Box<dyn Object> {
+    pub fn print(&self, expr: &dyn Expr) -> Value {
         return expr.accept(self)
     }
 
-    fn parenthesize(&self, name: String, exprs: &[&dyn Expr]) -> Box<String> {
+    fn parenthesize(&self, name: String, exprs: &[&dyn Expr]) -> String {
         let mut builder: String = String::new();
 
         builder.push('(');
@@ -18,33 +19,33 @@ impl AstPrinter {
 
         for expr in exprs.to_vec() {
             builder.push(' ');
-            builder.push_str(&expr.accept(self).as_string());
+            builder.push_str(&expr.accept(self).to_string());
         }
         
         builder.push(')');
 
-        Box::new(builder)
+        builder
     }
 }
 
 impl Visitor for AstPrinter {
-    fn visit_binary(&self, binary: &super::ast::Binary) -> Box<dyn Object> {
-        self.parenthesize(binary.operator.lexeme.clone(), &[&*binary.left, &*binary.right])
+    fn visit_binary(&self, binary: &super::ast::Binary) -> Value {
+        Value::String(self.parenthesize(binary.operator.lexeme.clone(), &[&*binary.left, &*binary.right]))
     }
 
-    fn visit_grouping(&self, grouping: &super::ast::Grouping) -> Box<dyn Object> {
-        self.parenthesize("group".to_string(), &[&*grouping.expression])
+    fn visit_grouping(&self, grouping: &super::ast::Grouping) -> Value {
+        Value::String(self.parenthesize("group".to_string(), &[&*grouping.expression]))
     }
 
-    fn visit_literal(&self, literal: & super::ast::Literal) -> Box<dyn Object> {
+    fn visit_literal(&self, literal: & super::ast::Literal) -> Value {
         return match &literal.value {
-            Some(value) => Box::new(value.clone_box()),
-            None => Box::new("null".to_string()) 
+            Some(value) => value.clone(),
+            None => Value::Null, 
         }
     }
 
-    fn visit_unary(&self, unary: &super::ast::Unary) -> Box<dyn Object> {
-        self.parenthesize(unary.operator.lexeme.clone(), &[&*unary.right])
+    fn visit_unary(&self, unary: &super::ast::Unary) -> Value {
+        Value::String(self.parenthesize(unary.operator.lexeme.clone(), &[&*unary.right]))
     }
 }
 
@@ -54,8 +55,8 @@ fn test_printer() {
     use crate::lexer::tokens::{Token, TokenType};
 
     // Create the literal expressions.
-    let literal_expr_1: Literal = Literal::new(Some(Box::new(123)));
-    let literal_expr_2: Literal = Literal::new(Some(Box::new(45.67)));
+    let literal_expr_1: Literal = Literal::new(Some(Value::Integer(123)));
+    let literal_expr_2: Literal = Literal::new(Some(Value::Float(45.67)));
 
     // Create the unary expression that references the first literal.
     let unary_expr: Unary = Unary::new(
@@ -76,7 +77,7 @@ fn test_printer() {
     // Instantiate the AST printer.
     let printer: AstPrinter = AstPrinter();
 
-    let result: Box<dyn Object> = printer.print(&*expr);
+    let result: Value = printer.print(&*expr);
 
     // Print the expression.
     println!("{}", result); // Expected output: (* (- 123) (group 45.67))

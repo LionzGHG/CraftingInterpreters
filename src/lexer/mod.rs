@@ -5,7 +5,8 @@ use std::{collections::HashMap, fmt::Debug};
 
 use tokens::{Token, TokenType};
 
-use crate::util::Object;
+// use crate::util::{Number, Object};
+use crate::util::Value;
 
 fn error(line: usize, msg: &str) -> ! {
     crate::report(line, "", msg)
@@ -22,7 +23,7 @@ macro_rules! map {
         }
     };
 }
-
+ 
 #[derive(Debug, Clone)]
 pub struct Lexer {
     source: String,
@@ -81,7 +82,18 @@ impl Lexer {
                 "scene" => TokenType::Scene,
                 "import" => TokenType::Import,
                 "echo" => TokenType::Echo,
-                "try" => TokenType::Try
+                "try" => TokenType::Try,
+                "await" => TokenType::Await,
+                "thread" => TokenType::Thread,
+                "worker" => TokenType::Worker,
+                "chan" => TokenType::Chan,
+                "select" => TokenType::Select,
+                "pool" => TokenType::Pool,
+                "defer" => TokenType::Defer,
+                "macro" => TokenType::Macro,
+                "vararg" => TokenType::Vararg,
+                "varargs" => TokenType::Varargs,
+                "test" => TokenType::Test
             }
         }
     }
@@ -110,9 +122,9 @@ impl Lexer {
         self.add_token_lit(type_, None);
     }
 
-    fn add_token_lit(&mut self, type_: TokenType, literal: Option<Box<dyn Object>>) {
+    fn add_token_lit(&mut self, type_: TokenType, literal: Option<Value>) {
         let text: String = self.source[self.start..self.current].to_string();
-        self.tokens.push(Token::new(type_, text, Some(Box::new(literal)), self.line));
+        self.tokens.push(Token::new(type_, text, literal, self.line));
     }
 
     fn expect(&mut self, expected: char) -> bool {
@@ -223,7 +235,7 @@ impl Lexer {
         self.next();
 
         let value: String = self.source[(self.start + 1)..(self.current - 1)].to_string();
-        self.add_token_lit(TokenType::String, Some(Box::new(value)));
+        self.add_token_lit(TokenType::String, Some(Value::String(value)));
     }
 
     fn number(&mut self) {
@@ -241,7 +253,7 @@ impl Lexer {
         }
 
         let value: String = self.source[self.start..self.current].to_string();
-        self.add_token_lit(TokenType::Number, Some(Box::new(value.parse::<f64>())));
+        self.add_token_lit(TokenType::Number, Some(Value::Float(value.parse::<f64>().unwrap())));
     }
 
     fn identifier(&mut self) {

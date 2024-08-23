@@ -1,8 +1,8 @@
-use std::ops::Deref;
 
 use ast::{Binary, Expr, Grouping, Literal, Unary};
 
 use crate::lexer::tokens::{Token, TokenType};
+use crate::util::Value;
 
 fn error(token: Token, msg: &str) -> ! {
     if token.type_ == TokenType::EOF {
@@ -140,11 +140,11 @@ impl Parser {
 
     fn primary(&mut self) -> Box<dyn Expr> {
         if self.expect(&[TokenType::False]) {
-            return Box::new(Literal::new(Some(Box::new(false))));
+            return Box::new(Literal::new(Some(Value::Boolean(false))));
         }
 
         if self.expect(&[TokenType::True]) {
-            return Box::new(Literal::new(Some(Box::new(true))));
+            return Box::new(Literal::new(Some(Value::Boolean(true))));
         }
 
         if self.expect(&[TokenType::Number, TokenType::String]) {

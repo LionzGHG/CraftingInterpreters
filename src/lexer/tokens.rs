@@ -1,7 +1,9 @@
 
 use core::fmt;
 
-use crate::util::Object;
+use crate::util::Value;
+
+//use crate::util::Object;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenType {
@@ -21,7 +23,8 @@ pub enum TokenType {
 
     Mut, Typeof, Sizeof, Nameof, As, Void, Use, With, Out, True, False, If, Elif, Else, While, For, 
     In, Entity, Init, New, This, Set, Enum, Throw, Catch, Pub, Priv, Prot, Unreachable, Trait, Parent, 
-    Open, Override, Scene, Import, Todo, Pass, Test, Echo, Try, 
+    Open, Override, Scene, Import, Todo, Pass, Echo, Try, Await, Thread, Worker, Chan, Select, Pool, Defer, 
+    Macro, Vararg, Varargs, Test,
 
     EOF
 }
@@ -30,7 +33,7 @@ pub enum TokenType {
 pub struct Token {
     pub type_: TokenType,
     pub lexeme: String,
-    pub literal: Option<Box<dyn Object>>,
+    pub literal: Option<Value>,
     pub line: usize,
 }
 
@@ -41,7 +44,7 @@ impl fmt::Display for Token {
 }
 
 impl Token {
-    pub fn new(type_: TokenType, lexeme: String, literal: Option<Box<dyn Object>>, line: usize) -> Self {
+    pub fn new(type_: TokenType, lexeme: String, literal: Option<Value>, line: usize) -> Self {
         Self { type_, lexeme, literal, line }
     }
 }
