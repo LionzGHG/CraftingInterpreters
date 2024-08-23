@@ -1,11 +1,24 @@
-use std::{any::{type_name_of_val, TypeId}, io};
+use std::{any::{type_name_of_val, TypeId}, collections::HashMap, io};
 
-use crate::{lexer::tokens::{Token, TokenType}, parser::ast::{Expr, Visitor}, /*util::{downcast_obj, downcast_to, downcast_to_f64, Number, Object*/};
+use environment::Environment;
+
+use crate::{lexer::tokens::{Token, TokenType}, parser::ast::{Expr, Stmt, Visitor}, /*util::{downcast_obj, downcast_to, downcast_to_f64, Number, Object*/};
 use crate::util::Value;
 
-pub struct Interpreter;
+pub mod environment;
+
+pub struct Interpreter {
+    environment: Environment
+}
 
 impl Interpreter {
+
+    pub fn new() -> Self {
+        Self {
+            environment: Environment(HashMap::new()),
+        }
+    }
+
     fn evaluate(&self, expr: &dyn Expr) -> Value {
         return expr.accept(self);
     }
@@ -17,9 +30,14 @@ impl Interpreter {
         return true;
     }
 
-    pub fn interpret(&self, expr: &dyn Expr) {
-        let value: Value = self.evaluate(&*expr);
-        println!("{}", value);
+    pub fn interpret(&mut self, stmts: Vec<Box<dyn Stmt>>) {
+        for stmt in stmts {
+            self.execute(stmt);
+        }
+    }
+
+    fn execute(&mut self, stmt: Box<dyn Stmt>) {
+        stmt.accept(self);
     }
 }
 
@@ -74,6 +92,28 @@ impl Visitor for Interpreter {
             // else
             _ => Error::unexpected_token(binary.operator.line, binary.operator.type_),
         }
+    }
+
+    fn visit_variable(&self, variable: &crate::parser::ast::Variable) -> Value {
+        return self.environment.get(variable.name.clone()).unwrap();
+    }
+
+    fn visit_expr_stmt(&self, expr: &crate::parser::ast::Expression) {
+        self.evaluate(&*expr.expr);
+    }
+
+    fn visit_echo_stmt(&self, echo: &crate::parser::ast::Echo) {
+        let value: Value = self.evaluate(&*echo.expr);
+        println!("{value}");
+    }
+
+    fn visit_var_decl(&mut self, var: &crate::parser::ast::Var) {
+        let mut value: Option<Value> = None;
+        if let Some(n) = &var.expr {
+            value = Some(self.evaluate(&**n));
+        }
+
+        self.environment.define(var.name.lexeme.clone(), value);
     }
 }
 

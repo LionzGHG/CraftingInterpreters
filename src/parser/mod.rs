@@ -1,5 +1,5 @@
 
-use ast::{Binary, Expr, Grouping, Literal, Unary};
+use ast::{Binary, Echo, Expr, Expression, Grouping, Literal, Stmt, Unary, Var, Variable};
 
 use crate::lexer::tokens::{Token, TokenType};
 use crate::util::Value;
@@ -28,8 +28,13 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Box<dyn Expr> {
-        return self.expression();
+    pub fn parse(&mut self) -> Vec<Box<dyn Stmt>> {
+        let mut stmts: Vec<Box<dyn Stmt>> = Vec::new();
+        while !self.eof() {
+            stmts.push(self.declaration());
+        }
+
+        return stmts;
     }
 
     fn expect(&mut self, types: &[TokenType]) -> bool {
@@ -57,6 +62,11 @@ impl Parser {
         return self.back();
     }
 
+    fn go_back(&mut self) -> Token {
+        self.current -= 1;
+        return self.back();
+    }
+
     fn eof(&self) -> bool {
         self.peek().type_ == TokenType::EOF
     }
@@ -75,7 +85,108 @@ impl Parser {
         }
         error(self.peek(), msg);
     }
-    
+
+    fn declaration(&mut self) -> Box<dyn Stmt> {
+        
+        if self.expect(&[TokenType::Set]) {
+            if self.peek().type_ == TokenType::Mut {
+                return self.var_declaration(true, true);
+            }
+            return self.var_declaration(false, true);
+        }
+        if self.expect(&[TokenType::Identifier]) && (self.peek().type_ == TokenType::Identifier || self.peek().type_ == TokenType::Mut) {
+            if self.peek().type_ == TokenType::Mut {
+                return self.var_declaration(true, false);
+            }
+            return self.var_declaration(false, false);
+        }
+
+
+        return self.statement();
+    }
+
+    fn var_declaration(&mut self, mutable: bool, inferred: bool) -> Box<dyn Stmt> {
+        // (TYPE | SET) MUT? NAME = EXPR;
+        if inferred && !mutable {
+            let name: Token = self.consume(TokenType::Identifier, "Expect variable name.");
+
+            let mut initializer: Option<Box<dyn Expr>> = None;
+            if self.expect(&[TokenType::Equal]) {
+                initializer = Some(self.expression());
+            }
+
+            self.consume(TokenType::Semicolon, "Expect ';' after variable declaration.");
+
+            return Box::new(Var::inferred(false, name, initializer));
+        }  
+
+        if !inferred && !mutable {
+            let type_: Token = self.tokens.iter().nth(self.current - 1).expect("Expect variable type").clone();
+            let name: Token = self.consume(TokenType::Identifier, "Expect variable name.");
+
+            let mut initializer: Option<Box<dyn Expr>> = None;
+            if self.expect(&[TokenType::Equal]) {
+                initializer = Some(self.expression());
+            }
+
+            self.consume(TokenType::Semicolon, "Expect ';' after variable declaration.");
+
+            return Box::new(Var::typed(type_, false, name, initializer));
+        }
+
+        if inferred && mutable {
+            self.next();
+            let name: Token = self.consume(TokenType::Identifier, "Expect variable name.");
+
+            let mut initializer: Option<Box<dyn Expr>> = None;
+            if self.expect(&[TokenType::Equal]) {
+                initializer = Some(self.expression());
+            }
+
+            self.consume(TokenType::Semicolon, "Expect ';' after variable declaration.");
+
+            return Box::new(Var::inferred(true, name, initializer));
+        }
+
+        if !inferred && mutable {
+            let type_: Token = self.tokens.iter().nth(self.current - 1).expect("Expect variable type.").clone();
+            let name: Token = self.tokens.iter().nth(self.current + 1).expect("Expect variable name.").clone();
+            self.next();
+            self.next();
+
+            let mut initializer: Option<Box<dyn Expr>> = None;
+            if self.expect(&[TokenType::Equal]) {
+                initializer = Some(self.expression());
+            }
+
+            self.consume(TokenType::Semicolon, "Expect ';' after variable declaration");
+
+            return Box::new(Var::typed(type_, true, name, initializer));        
+        }
+
+        unreachable!()
+    }
+
+    fn statement(&mut self) -> Box<dyn Stmt> {
+        if self.expect(&[TokenType::Echo]) {
+            return self.echo_statement();
+        }
+
+        return self.expression_statement();
+    }
+
+    fn echo_statement(&mut self) -> Box<dyn Stmt> {
+        let value: Box<dyn Expr> = self.expression();
+        self.consume(TokenType::Semicolon, "Expect ';' after value.");
+        return Box::new(Echo::new(value));
+    }
+
+    fn expression_statement(&mut self) -> Box<dyn Stmt> {
+        let expr: Box<dyn Expr> = self.expression();
+        self.consume(TokenType::Semicolon, "Expect ';' after expression.");
+        return Box::new(Expression::new(expr));
+    }
+
     fn expression(&mut self) -> Box<dyn Expr> {
         self.equality()
     }
@@ -149,6 +260,10 @@ impl Parser {
 
         if self.expect(&[TokenType::Number, TokenType::String]) {
             return Box::new(Literal::new(self.back().literal));
+        }
+
+        if self.expect(&[TokenType::Identifier]) {
+            return Box::new(Variable::new(self.back()));
         }
 
         if self.expect(&[TokenType::LParen]) {

@@ -4,8 +4,22 @@ comparison  -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term        -> factor ( ( "-" | "+" ) factor )* ;
 factor      -> unary ( ( "/" | "*" ) unary )* ;
 unary       -> ( "!" | "-" ) unary 
-             | primary ;
-primary     -> NUMBER | STRING | "true" | "false" | "null"
-             | "(" expression ")" ;
+            | primary ;
+primary     -> "true" | "false"
+            | NUMBER | STRING
+            | "(" expression ")"
+            | IDENTIFIER ;
 
-  
+program -> declaration* EOF ;
+
+declaration -> varDecl
+            | statment ;
+
+statement -> exprStmt 
+            | echoStmt ;
+
+varDecl -> ("set" | IDENTIFIER) ( "mut" )? IDENTIFIER ( "=" expression )? ";" ;
+
+
+exprStmt -> expression ";" ;
+echoStmt -> "echo" expression ";";

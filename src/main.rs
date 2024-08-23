@@ -2,7 +2,7 @@ use std::{fs, io::{self, stdin, BufRead, BufReader}};
 
 use interpreter::Interpreter;
 use lexer::{tokens::Token, Lexer};
-use parser::{ast::Expr, ast_printer::AstPrinter, Parser};
+use parser::{ast::{Expr, Stmt}, ast_printer::AstPrinter, Parser};
 
 pub mod lexer;
 pub mod parser;
@@ -63,12 +63,12 @@ fn run(source: String) {
     }
 
     let mut parser: Parser = Parser::new(tokens);
-    let expr: Box<dyn Expr> = parser.parse();
+    let stmts: Vec<Box<dyn Stmt>> = parser.parse();
 
-    println!("expr = {}", AstPrinter().print(&*expr));
+    // println!("expr = {}", AstPrinter().print(&*expr));
 
-    let interpreter: Interpreter = Interpreter;
-    interpreter.interpret(&*expr);
+    let mut interpreter: Interpreter = Interpreter::new();
+    interpreter.interpret(stmts);
 }
 
 pub fn report(line: usize, where_: &str, msg: &str) -> ! {

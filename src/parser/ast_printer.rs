@@ -47,6 +47,22 @@ impl Visitor for AstPrinter {
     fn visit_unary(&self, unary: &super::ast::Unary) -> Value {
         Value::String(self.parenthesize(unary.operator.lexeme.clone(), &[&*unary.right]))
     }
+
+    fn visit_echo_stmt(&self, echo: &super::ast::Echo) {
+        todo!()
+    }
+    
+    fn visit_expr_stmt(&self, expr: &super::ast::Expression) {
+        todo!()
+    }
+    
+    fn visit_var_decl(&mut self, var: &super::ast::Var) {
+        todo!()
+    }
+
+    fn visit_variable(&self, variable: &super::ast::Variable) -> Value {
+        todo!()
+    }
 }
 
 #[test]
