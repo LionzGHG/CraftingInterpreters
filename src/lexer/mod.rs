@@ -239,12 +239,15 @@ impl Lexer {
     }
 
     fn number(&mut self) {
+        let mut is_f64: bool = false;
+
         while is_digit(self.peek()) {
             println!("current = {}", self.source.chars().nth(self.current).unwrap());
             self.next();
         }
 
         if self.peek() == '.' && is_digit(self.peek_next()) {
+            is_f64 = true;
             self.next();
 
             while is_digit(self.peek()) {
@@ -253,7 +256,11 @@ impl Lexer {
         }
 
         let value: String = self.source[self.start..self.current].to_string();
-        self.add_token_lit(TokenType::Number, Some(Value::Float(value.parse::<f64>().unwrap())));
+
+        match is_f64 {
+            true => self.add_token_lit(TokenType::Number, Some(Value::Float(value.parse::<f64>().unwrap()))),
+            false => self.add_token_lit(TokenType::Number, Some(Value::Integer(value.parse::<i32>().unwrap()))), 
+        }
     }
 
     fn identifier(&mut self) {

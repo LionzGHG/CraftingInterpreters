@@ -1,5 +1,7 @@
 use std::{any::Any, fmt::{Debug, Display}, panic::{AssertUnwindSafe, UnwindSafe}};
 
+pub mod error;
+
 #[derive(Clone, Debug)]
 pub enum Value {
     Integer(i32),
@@ -7,6 +9,27 @@ pub enum Value {
     String(String),
     Boolean(bool),
     Null,
+}
+
+impl Value {
+    pub fn is_i32(&self) -> bool {
+        if let Value::Integer(..) = self {
+            return true;
+        }  
+        return false;
+    }
+    pub fn is_f64(&self) -> bool {
+        if let Value::Float(..) = self { return true };
+        return false;
+    }
+    pub fn is_boolean(&self) -> bool {
+        if let Value::Boolean(..) = self { return true };
+        return false;
+    }
+    pub fn is_string(&self) -> bool {
+        if let Value::String(..) = self { return true };
+        return false;
+    }
 }
 
 impl core::fmt::Display for Value {

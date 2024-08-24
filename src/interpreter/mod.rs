@@ -1,9 +1,9 @@
 use std::{any::{type_name_of_val, TypeId}, collections::HashMap, io};
 
-use environment::Environment;
+use environment::{Environment, VarAttrib};
 
 use crate::{lexer::tokens::{Token, TokenType}, parser::ast::{Expr, Stmt, Visitor}, /*util::{downcast_obj, downcast_to, downcast_to_f64, Number, Object*/};
-use crate::util::Value;
+use crate::util::{Value, error::Error};
 
 pub mod environment;
 
@@ -73,8 +73,16 @@ impl Visitor for Interpreter {
         let lhs: Value = self.evaluate(&*binary.left);
         let rhs: Value = self.evaluate(&*binary.right);
 
-        let x: f64 = if let Value::Float(f) = lhs { f } else { 0. };
-        let y: f64 = if let Value::Float(f) = rhs { f } else { 0. };
+        let x = match lhs {
+            Value::Float(n) => n,
+            Value::Integer(n) => n as f64,
+            _ => panic!()
+        };
+        let y = match rhs {
+            Value::Float(n) => n,
+            Value::Integer(n) => n as f64,
+            _ => panic!()
+        };
 
         return match binary.operator.type_ {
             // arithmetic
@@ -95,7 +103,7 @@ impl Visitor for Interpreter {
     }
 
     fn visit_variable(&self, variable: &crate::parser::ast::Variable) -> Value {
-        return self.environment.get(variable.name.clone()).unwrap();
+        return self.environment.get(variable.name.clone()).1.unwrap();
     }
 
     fn visit_expr_stmt(&self, expr: &crate::parser::ast::Expression) {
@@ -113,26 +121,39 @@ impl Visitor for Interpreter {
             value = Some(self.evaluate(&**n));
         }
 
-        self.environment.define(var.name.lexeme.clone(), value);
+        // type checking
+        self.match_types(var, value.clone());
+
+        self.environment.define(var.name.lexeme.clone(), VarAttrib(var.datatype.clone(), value));
+        println!("{:?}", self.environment.0);
     }
 }
 
-struct Error;
-
-impl Error {
-    fn number_operand(line: usize) -> ! {
-        panic!("[line {line}] Error: Expected number after Operand in Expression.");
+impl Interpreter {
+    fn match_types(&mut self, var: &crate::parser::ast::Var, value: Option<Value>) {
+        if let Some(type_) = &var.datatype {
+            if let TokenType::Identifier = type_.type_ {
+                if let Some(value) = value {
+                    if value.is_i32() {
+                        self.assert_type(&type_.lexeme, &["i32", "u32"]);
+                    }
+                    if value.is_f64() {
+                        self.assert_type(&type_.lexeme, &["f64", "f32"]);
+                    }
+                    if value.is_boolean() {
+                        self.assert_type(&type_.lexeme, &["boolean"]);
+                    }
+                    if value.is_string() {
+                        self.assert_type(&type_.lexeme, &["String", "string"]);
+                    }
+                }
+            }
+        }
     }
 
-    fn unexpected_token(line: usize, token: TokenType) -> ! {
-        panic!("[line {line}] Error: Unexpected Token '{token:?}'.");
-    }
-
-    fn unexpected_type(line: usize, type_: Value) -> ! {
-        panic!("[line {line}] Error: Expected type 'float', got value of '{}'", type_);
-    }
-
-    fn fatal() -> ! {
-        panic!("Fatal Error");
+    fn assert_type(&self, input: &String, expected: &[&str]) {
+        if !expected.contains(&input.as_str()) {
+            Error::type_mismatch(&input, &expected);
+        }
     }
 }

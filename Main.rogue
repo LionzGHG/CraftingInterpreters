@@ -1,8 +1,8 @@
 
 set mut x = 10;
 set y = "Hello";
-i32 myVariable = 100;
-u32 mut mutableVariable = 20;
+u32 myVariable = 100;
+i32 mut mutableVariable = 20;
 
 echo "Hello, World!";
 echo x + 20 * myVariable / 2;

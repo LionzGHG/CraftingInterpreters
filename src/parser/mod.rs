@@ -87,7 +87,6 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Box<dyn Stmt> {
-        
         if self.expect(&[TokenType::Set]) {
             if self.peek().type_ == TokenType::Mut {
                 return self.var_declaration(true, true);
@@ -101,71 +100,36 @@ impl Parser {
             return self.var_declaration(false, false);
         }
 
-
         return self.statement();
     }
 
     fn var_declaration(&mut self, mutable: bool, inferred: bool) -> Box<dyn Stmt> {
-        // (TYPE | SET) MUT? NAME = EXPR;
-        if inferred && !mutable {
-            let name: Token = self.consume(TokenType::Identifier, "Expect variable name.");
-
-            let mut initializer: Option<Box<dyn Expr>> = None;
-            if self.expect(&[TokenType::Equal]) {
-                initializer = Some(self.expression());
-            }
-
-            self.consume(TokenType::Semicolon, "Expect ';' after variable declaration.");
-
-            return Box::new(Var::inferred(false, name, initializer));
-        }  
-
-        if !inferred && !mutable {
-            let type_: Token = self.tokens.iter().nth(self.current - 1).expect("Expect variable type").clone();
-            let name: Token = self.consume(TokenType::Identifier, "Expect variable name.");
-
-            let mut initializer: Option<Box<dyn Expr>> = None;
-            if self.expect(&[TokenType::Equal]) {
-                initializer = Some(self.expression());
-            }
-
-            self.consume(TokenType::Semicolon, "Expect ';' after variable declaration.");
-
-            return Box::new(Var::typed(type_, false, name, initializer));
+        if mutable {
+            self.next(); // skip the "mut" keyword
         }
-
-        if inferred && mutable {
-            self.next();
+    
+        let (type_, name) = if inferred {
+            (None, self.consume(TokenType::Identifier, "Expect variable name."))
+        } else {
+            let type_: Option<Token> = Some(self.tokens.iter().nth(self.current - 1).expect("Expect variable type").clone());
             let name: Token = self.consume(TokenType::Identifier, "Expect variable name.");
-
-            let mut initializer: Option<Box<dyn Expr>> = None;
-            if self.expect(&[TokenType::Equal]) {
-                initializer = Some(self.expression());
-            }
-
-            self.consume(TokenType::Semicolon, "Expect ';' after variable declaration.");
-
-            return Box::new(Var::inferred(true, name, initializer));
+            (type_, name)
+        };
+    
+        let mut initializer: Option<Box<dyn Expr>> = None;
+        if self.expect(&[TokenType::Equal]) {
+            initializer = Some(self.expression());
         }
-
-        if !inferred && mutable {
-            let type_: Token = self.tokens.iter().nth(self.current - 1).expect("Expect variable type.").clone();
-            let name: Token = self.tokens.iter().nth(self.current + 1).expect("Expect variable name.").clone();
-            self.next();
-            self.next();
-
-            let mut initializer: Option<Box<dyn Expr>> = None;
-            if self.expect(&[TokenType::Equal]) {
-                initializer = Some(self.expression());
-            }
-
-            self.consume(TokenType::Semicolon, "Expect ';' after variable declaration");
-
-            return Box::new(Var::typed(type_, true, name, initializer));        
+    
+        self.consume(TokenType::Semicolon, "Expect ';' after variable declaration.");
+    
+        if let Some(type_) = type_ {
+            return Box::new(Var::typed(type_, mutable, name, initializer));
         }
-
-        unreachable!()
+    
+        Box::new(Var::inferred(mutable, name, initializer))
     }
+    
 
     fn statement(&mut self) -> Box<dyn Stmt> {
         if self.expect(&[TokenType::Echo]) {
