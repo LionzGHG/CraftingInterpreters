@@ -2,7 +2,7 @@ use std::{fs, io::{self, stdin, BufRead, BufReader}};
 
 use interpreter::Interpreter;
 use lexer::{tokens::Token, Lexer};
-use parser::{ast::{Expr, Stmt}, ast_printer::AstPrinter, Parser};
+use parser::{ast::{Expr, Stmt}, Parser};
 
 pub mod lexer;
 pub mod parser;

@@ -1,21 +1,26 @@
 
+use std::{any::Any, ffi::FromVecWithNulError};
+
 use crate::{lexer::tokens::Token, /*util::Object*/ util::Value};
 
 pub trait Visitor {
-    fn visit_binary(&self, binary: &Binary) -> Value;
-    fn visit_grouping(&self, grouping: &Grouping) -> Value;
+    fn visit_binary(&mut self, binary: &Binary) -> Value;
+    fn visit_grouping(&mut self, grouping: &Grouping) -> Value;
     fn visit_literal(&self, literal: &Literal) -> Value;
-    fn visit_unary(&self, unary: &Unary) -> Value;
+    fn visit_unary(&mut self, unary: &Unary) -> Value;
     fn visit_variable(&self, variable: &Variable) -> Value;
+    fn visit_assign(&mut self, assign: &Assign) -> Value;
 
-    fn visit_expr_stmt(&self, expr: &Expression);
-    fn visit_echo_stmt(&self, echo: &Echo);
+    fn visit_expr_stmt(&mut self, expr: &Expression);
+    fn visit_echo_stmt(&mut self, echo: &Echo);
+    fn visit_block_stmt(&mut self, block: &Block);
     
     fn visit_var_decl(&mut self, var: &Var);
 }
 
 pub trait Expr {
-    fn accept(&self, visitor: &dyn Visitor) -> Value;
+    fn accept(&self, visitor: &mut dyn Visitor) -> Value;
+    fn as_any(&self) -> &dyn Any;
 }
 
 pub struct Binary {
@@ -31,8 +36,11 @@ impl Binary {
 }
 
 impl Expr for Binary {
-    fn accept(&self, visitor: &dyn Visitor) -> Value {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Value {
         visitor.visit_binary(self)
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 
@@ -46,8 +54,11 @@ impl Grouping {
     }
 }
 impl Expr for Grouping {
-    fn accept(&self, visitor: &dyn Visitor) -> Value {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Value {
         visitor.visit_grouping(self)
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 
@@ -61,8 +72,11 @@ impl Literal {
     }
 }
 impl Expr for Literal {
-    fn accept(&self, visitor: &dyn Visitor) -> Value {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Value {
         visitor.visit_literal(self)
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 
@@ -75,13 +89,18 @@ impl Unary {
     pub fn new(operator: Token, right: Box<dyn Expr>) -> Self {
         Self { operator, right }
     }
+    
 }
 impl Expr for Unary {
-    fn accept(&self, visitor: &dyn Visitor) -> Value {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Value {
         visitor.visit_unary(self)
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 
+#[derive(Debug)]
 pub struct Variable {
     pub name: Token,
 }
@@ -93,11 +112,34 @@ impl Variable {
 }
 
 impl Expr for Variable {
-    fn accept(&self, visitor: &dyn Visitor) -> Value {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Value {
         visitor.visit_variable(self)
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 
+
+pub struct Assign {
+    pub name: Token,
+    pub value: Box<dyn Expr>,
+}
+
+impl Assign {
+    pub fn new(name: Token, value: Box<dyn Expr>) -> Self {
+        Self { name, value }
+    }
+}
+
+impl Expr for Assign {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Value {
+        visitor.visit_assign(self)
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
 
 
 pub trait Stmt {
@@ -163,5 +205,21 @@ impl Var {
 impl Stmt for Var {
     fn accept(&self, visitor: &mut dyn Visitor) {
         visitor.visit_var_decl(self);
+    }
+}
+
+pub struct Block {
+    pub statements: Vec<Box<dyn Stmt>>,
+}
+
+impl Block {
+    pub fn new(statements: Vec<Box<dyn Stmt>>) -> Self {
+        Self { statements }
+    }
+}
+
+impl Stmt for Block {
+    fn accept(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_block_stmt(self);
     }
 }

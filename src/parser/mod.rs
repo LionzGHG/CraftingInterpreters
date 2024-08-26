@@ -1,5 +1,5 @@
 
-use ast::{Binary, Echo, Expr, Expression, Grouping, Literal, Stmt, Unary, Var, Variable};
+use ast::{Assign, Binary, Block, Echo, Expr, Expression, Grouping, Literal, Stmt, Unary, Var, Variable};
 
 use crate::lexer::tokens::{Token, TokenType};
 use crate::util::Value;
@@ -64,9 +64,9 @@ impl Parser {
 
     fn go_back(&mut self) -> Token {
         self.current -= 1;
-        return self.back();
+        return self.tokens.iter().nth(self.current).unwrap().clone();
     }
-
+    
     fn eof(&self) -> bool {
         self.peek().type_ == TokenType::EOF
     }
@@ -136,7 +136,22 @@ impl Parser {
             return self.echo_statement();
         }
 
+        if self.expect(&[TokenType::LBrace]) {
+            return Box::new(Block::new(self.block()));
+        }
+
         return self.expression_statement();
+    }
+
+    fn block(&mut self) -> Vec<Box<dyn Stmt>> {
+        let mut stmts: Vec<Box<dyn Stmt>> = Vec::new();
+
+        while !self.check(TokenType::RBrace) && !self.eof() {
+            stmts.push(self.declaration());
+        }
+
+        self.consume(TokenType::RBrace, "Expect '}' after block.");
+        return stmts;
     }
 
     fn echo_statement(&mut self) -> Box<dyn Stmt> {
@@ -152,7 +167,25 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Box<dyn Expr> {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Box<dyn Expr> {
+        let expr: Box<dyn Expr> = self.equality();
+        
+        if self.expect(&[TokenType::Equal]) {
+            let equals: Token = self.back();
+            let value: Box<dyn Expr> = self.assignment();
+
+            if let Some(variable) = expr.as_any().downcast_ref::<Variable>() {
+                let name: Token = variable.name.clone();
+                return Box::new(Assign::new(name, value));
+            }
+
+            error(equals, "Invalid assignment target.");
+        }
+
+        expr
     }
 
     fn equality(&mut self) -> Box<dyn Expr> {
@@ -214,6 +247,7 @@ impl Parser {
     }
 
     fn primary(&mut self) -> Box<dyn Expr> {
+
         if self.expect(&[TokenType::False]) {
             return Box::new(Literal::new(Some(Value::Boolean(false))));
         }
@@ -227,6 +261,10 @@ impl Parser {
         }
 
         if self.expect(&[TokenType::Identifier]) {
+            return Box::new(Variable::new(self.back()));
+        }
+
+        if self.tokens.iter().nth(self.current - 1).unwrap().clone().type_ == TokenType::Identifier {
             return Box::new(Variable::new(self.back()));
         }
 
@@ -247,8 +285,6 @@ impl Parser {
                 return;
             }
         }
-
-
 
         match self.peek().type_ {
             TokenType::Entity | TokenType::Trait | TokenType::Set | TokenType::Catch | TokenType::If |

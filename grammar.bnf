@@ -1,14 +1,11 @@
-expression  -> equality ;
-equality    -> comparison ( ( "!=" | "==" ) comparison )* ;
-comparison  -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-term        -> factor ( ( "-" | "+" ) factor )* ;
-factor      -> unary ( ( "/" | "*" ) unary )* ;
-unary       -> ( "!" | "-" ) unary 
-            | primary ;
-primary     -> "true" | "false"
-            | NUMBER | STRING
-            | "(" expression ")"
-            | IDENTIFIER ;
+expression -> equality ;
+equality -> comparison ( ( "!=" | "==" ) comparison )* ;
+comparison -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+term -> factor ( ( "-" | "+" ) factor )* ;
+factor -> unary ( ( "/" | "*" ) unary )* ;
+unary -> ( "!" | "-" ) unary 
+       | primary ;
+primary -> "true" | "false" | NUMBER | STRING | "(" expression ")" | IDENTIFIER ;
 
 program -> declaration* EOF ;
 
@@ -17,6 +14,8 @@ declaration -> varDecl
 
 statement -> exprStmt 
             | echoStmt ;
+
+block -> "{" declaration* "}" ;
 
 varDecl -> ("set" | IDENTIFIER) ( "mut" )? IDENTIFIER ( "=" expression )? ";" ;
 

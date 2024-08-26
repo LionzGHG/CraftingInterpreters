@@ -1,13 +1,14 @@
 // use crate::util::Object;
-use crate::util::Value;
+/*use crate::util::Value;
 
 use super::ast::{Expr, Visitor};
 
 
+#[deprecated]
 pub struct AstPrinter();
 
 impl AstPrinter {
-    pub fn print(&self, expr: &dyn Expr) -> Value {
+    pub fn print(&mut self, expr: &dyn Expr) -> Value {
         return expr.accept(self)
     }
 
@@ -19,7 +20,7 @@ impl AstPrinter {
 
         for expr in exprs.to_vec() {
             builder.push(' ');
-            builder.push_str(&expr.accept(self).to_string());
+            //builder.push_str(&expr.accept(&mut self).to_string());
         }
         
         builder.push(')');
@@ -63,6 +64,10 @@ impl Visitor for AstPrinter {
     fn visit_variable(&self, variable: &super::ast::Variable) -> Value {
         todo!()
     }
+
+    fn visit_assign(&mut self, assign: &super::ast::Assign) -> Value {
+        todo!()
+    }
 }
 
 #[test]
@@ -93,8 +98,8 @@ fn test_printer() {
     // Instantiate the AST printer.
     let printer: AstPrinter = AstPrinter();
 
-    let result: Value = printer.print(&*expr);
+    //let result: Value = printer.print(&*expr);
 
     // Print the expression.
-    println!("{}", result); // Expected output: (* (- 123) (group 45.67))
-}
+    //println!("{}", result); // Expected output: (* (- 123) (group 45.67))
+}*/

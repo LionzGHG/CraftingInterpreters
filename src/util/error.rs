@@ -32,6 +32,10 @@ impl Error {
         panic!("{error}");
     }
 
+    pub fn immutable_var(name: String) -> ! {
+        panic!("cannot assign to '{name}' because '{name}' is immutable.\n  Solution: make '{name}' mutable by adding the `mut` keyword.");
+    }
+
     pub fn undefined_var(token: Token) -> ! {
         panic!("Runtime Error: undefined variable '{}'.", token.lexeme);
     }

@@ -15,11 +15,11 @@ impl Interpreter {
 
     pub fn new() -> Self {
         Self {
-            environment: Environment(HashMap::new()),
+            environment: Environment::new(),
         }
     }
 
-    fn evaluate(&self, expr: &dyn Expr) -> Value {
+    fn evaluate(&mut self, expr: &dyn Expr) -> Value {
         return expr.accept(self);
     }
 
@@ -39,6 +39,17 @@ impl Interpreter {
     fn execute(&mut self, stmt: Box<dyn Stmt>) {
         stmt.accept(self);
     }
+
+    fn execute_block(&mut self, statements: &Vec<Box<dyn Stmt>>, environment: Environment) {
+        let previous: Environment = self.environment.clone();
+        self.environment = environment;
+
+        for statement in statements {
+            statement.accept(self);
+        }
+
+        self.environment = previous;
+    }
 }
 
 
@@ -48,11 +59,11 @@ impl Visitor for Interpreter {
         return literal.value.clone().expect("no literal expr found");
     }
 
-    fn visit_grouping(&self, grouping: &crate::parser::ast::Grouping) -> Value {
+    fn visit_grouping(&mut self, grouping: &crate::parser::ast::Grouping) -> Value {
         return self.evaluate(&*grouping.expression);
     }
 
-    fn visit_unary(&self, unary: &crate::parser::ast::Unary) -> Value {
+    fn visit_unary(&mut self, unary: &crate::parser::ast::Unary) -> Value {
         let right: Value = self.evaluate(&*unary.right);
 
         match unary.operator.type_ {
@@ -69,16 +80,16 @@ impl Visitor for Interpreter {
         }
     }
 
-    fn visit_binary(&self, binary: &crate::parser::ast::Binary) -> Value {
+    fn visit_binary(&mut self, binary: &crate::parser::ast::Binary) -> Value {
         let lhs: Value = self.evaluate(&*binary.left);
         let rhs: Value = self.evaluate(&*binary.right);
 
-        let x = match lhs {
+        let x: f64 = match lhs {
             Value::Float(n) => n,
             Value::Integer(n) => n as f64,
             _ => panic!()
         };
-        let y = match rhs {
+        let y: f64 = match rhs {
             Value::Float(n) => n,
             Value::Integer(n) => n as f64,
             _ => panic!()
@@ -106,13 +117,24 @@ impl Visitor for Interpreter {
         return self.environment.get(variable.name.clone()).1.unwrap();
     }
 
-    fn visit_expr_stmt(&self, expr: &crate::parser::ast::Expression) {
+    
+    fn visit_assign(&mut self, assign: &crate::parser::ast::Assign) -> Value {
+        let value: Value = self.evaluate(&*assign.value);
+        self.environment.assign(assign.name.clone(), &value);
+        return value;
+    }
+
+    fn visit_expr_stmt(&mut self, expr: &crate::parser::ast::Expression) {
         self.evaluate(&*expr.expr);
     }
 
-    fn visit_echo_stmt(&self, echo: &crate::parser::ast::Echo) {
+    fn visit_echo_stmt(&mut self, echo: &crate::parser::ast::Echo) {
         let value: Value = self.evaluate(&*echo.expr);
         println!("{value}");
+    }
+
+    fn visit_block_stmt(&mut self, block: &crate::parser::ast::Block) {
+        self.execute_block(&block.statements, Environment::with_enclosing(self.environment.clone()));
     }
 
     fn visit_var_decl(&mut self, var: &crate::parser::ast::Var) {
@@ -124,8 +146,8 @@ impl Visitor for Interpreter {
         // type checking
         self.match_types(var, value.clone());
 
-        self.environment.define(var.name.lexeme.clone(), VarAttrib(var.datatype.clone(), value));
-        println!("{:?}", self.environment.0);
+        self.environment.define(var.name.lexeme.clone(), VarAttrib(var.datatype.clone(), value, var.mutability));
+        println!("{:?}", self.environment.map);
     }
 }
 

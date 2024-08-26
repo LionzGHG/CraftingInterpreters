@@ -133,22 +133,3 @@ pub fn downcast_to<T: 'static + Clone>(obj: &dyn Object) -> Option<T> {
 
     return None;
 }
-
-#[deprecated]
-#[test]
-fn test_conversion() {
-    use std::any::type_name;
-    use std::any::type_name_of_val;
-
-    let value: Box<dyn Object> = Box::new(Some(Some(10.0)));
-    let typeid: &str = type_name_of_val(&*value);
-
-    assert_eq!(typeid, type_name::<dyn Object>());
-
-    let downcasted: f64 = downcast_to_f64(&*value).unwrap();
-    let downcasted_typeid: &str = type_name_of_val(&downcasted);
-    assert_eq!("f64", downcasted_typeid);
-
-    let downcasted: f64 = downcast_to::<f64>(&*value).unwrap();
-    assert_eq!("f64", type_name_of_val(&downcasted));
-}

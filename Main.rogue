@@ -1,8 +1,19 @@
-
-set mut x = 10;
-set y = "Hello";
-u32 myVariable = 100;
-i32 mut mutableVariable = 20;
-
-echo "Hello, World!";
-echo x + 20 * myVariable / 2;
+set a = "global a";
+set b = "global b";
+set c = "global c";
+{
+  set a = "outer a";
+  set b = "outer b";
+  {
+    set a = "inner a";
+    echo a;
+    echo b;
+    echo c;
+  }
+  echo a;
+  echo b;
+  echo c;
+}
+echo a;
+echo b;
+echo c;

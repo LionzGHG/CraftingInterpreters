@@ -93,7 +93,8 @@ impl Lexer {
                 "macro" => TokenType::Macro,
                 "vararg" => TokenType::Vararg,
                 "varargs" => TokenType::Varargs,
-                "test" => TokenType::Test
+                "test" => TokenType::Test,
+                "move" => TokenType::Move
             }
         }
     }
