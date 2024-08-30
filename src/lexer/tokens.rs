@@ -26,6 +26,8 @@ pub enum TokenType {
     Open, Override, Scene, Import, Todo, Pass, Echo, Try, Await, Thread, Worker, Chan, Select, Pool, Defer, 
     Macro, Vararg, Varargs, Test, Move,
 
+    And, Or,
+
     EOF
 }
 
@@ -35,6 +37,7 @@ pub struct Token {
     pub lexeme: String,
     pub literal: Option<Value>,
     pub line: usize,
+    pub row: usize, 
 }
 
 impl fmt::Display for Token {
@@ -44,7 +47,7 @@ impl fmt::Display for Token {
 }
 
 impl Token {
-    pub fn new(type_: TokenType, lexeme: String, literal: Option<Value>, line: usize) -> Self {
-        Self { type_, lexeme, literal, line }
+    pub fn new(type_: TokenType, lexeme: String, literal: Option<Value>, line: usize, row: usize) -> Self {
+        Self { type_, lexeme, literal, line, row }
     }
 }

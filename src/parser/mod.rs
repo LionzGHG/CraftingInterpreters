@@ -1,15 +1,18 @@
 
-use ast::{Assign, Binary, Block, Echo, Expr, Expression, Grouping, Literal, Stmt, Unary, Var, Variable};
+use ast::{Assign, Binary, Block, Echo, Expr, Expression, Grouping, If, Literal, Logical, Stmt, Unary, Var, Variable, While};
 
 use crate::lexer::tokens::{Token, TokenType};
+use crate::util::error_formatter::{ErrorHandler, ErrorKind};
 use crate::util::Value;
 
-fn error(token: Token, msg: &str) -> ! {
-    if token.type_ == TokenType::EOF {
+fn error(token: Token, msg: &'static str) -> ! {
+    /*if token.type_ == TokenType::EOF {
         crate::report(token.line, &" at end", &msg);
     } else {
         crate::report(token.line, format!(" at '{}'", token.lexeme).as_str(), &msg);
-    }
+    }*/
+    let error_handler: ErrorHandler = ErrorHandler;
+    error_handler.throw(ErrorKind::UnexpectedToken(token, msg));
 }
 
 pub mod ast;
@@ -79,7 +82,7 @@ impl Parser {
         self.tokens.get(self.current - 1).unwrap().clone()
     }
 
-    fn consume(&mut self, type_: TokenType, msg: &str) -> Token {
+    fn consume(&mut self, type_: TokenType, msg: &'static str) -> Token {
         if self.check(type_) {
             return self.next();
         }
@@ -140,6 +143,18 @@ impl Parser {
             return Box::new(Block::new(self.block()));
         }
 
+        if self.expect(&[TokenType::If]) {
+            return self.if_statement();
+        }
+
+        if self.expect(&[TokenType::While]) {
+            return self.while_statement();
+        }
+
+        if self.expect(&[TokenType::For]) {
+            return self.for_statement();
+        }
+
         return self.expression_statement();
     }
 
@@ -152,6 +167,43 @@ impl Parser {
 
         self.consume(TokenType::RBrace, "Expect '}' after block.");
         return stmts;
+    }
+
+    fn if_statement(&mut self) -> Box<dyn Stmt> {
+        self.consume(TokenType::LParen, "Expect '(' after 'if'.");
+        let condition: Box<dyn Expr> = self.expression();
+        self.consume(TokenType::RParen, "Expect ')' after if condition.");
+
+        let then_branch: Box<dyn Stmt> = self.statement();
+        let mut else_branch: Option<Box<dyn Stmt>> = None;
+
+        if self.expect(&[TokenType::Else]) {
+            else_branch = Some(self.statement());
+        }
+
+        return Box::new(If::new(condition, then_branch, else_branch));
+    }
+
+    fn while_statement(&mut self) -> Box<dyn Stmt> {
+        self.consume(TokenType::LParen, "Expect '(' after 'while'.");
+        let condition: Box<dyn Expr> = self.expression();
+        self.consume(TokenType::RParen, "Expect ')' after condition.");
+        let body: Box<dyn Stmt> = self.statement();
+
+        return Box::new(While::new(condition, body));
+    }
+
+    fn for_statement(&mut self) -> Box<dyn Stmt> {
+        // forStmt -> "for" "(" ( IDENTIFIER "in" )? (range | IDENTIFIER) ")" statement ;
+        // range   -> NUMBER ".." NUMBER ;
+        self.consume(TokenType::LParen, "Expect '(' after 'for'.");
+
+        let mut initializer: Option<Box<dyn Stmt>> = None;
+        if self.expect(&[TokenType::Identifier]) {
+            initializer = Some(Box::new(Var::inferred(true, self.peek(), None)));
+        }
+
+        todo!()
     }
 
     fn echo_statement(&mut self) -> Box<dyn Stmt> {
@@ -171,7 +223,7 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> Box<dyn Expr> {
-        let expr: Box<dyn Expr> = self.equality();
+        let expr: Box<dyn Expr> = self.or();
         
         if self.expect(&[TokenType::Equal]) {
             let equals: Token = self.back();
@@ -186,6 +238,30 @@ impl Parser {
         }
 
         expr
+    }
+
+    fn or(&mut self) -> Box<dyn Expr> {
+        let mut expr: Box<dyn Expr> = self.and();
+
+        while self.expect(&[TokenType::Or]) {
+            let operator: Token = self.back();
+            let rhs: Box<dyn Expr> = self.and();
+            expr = Box::new(Logical::new(expr, operator, rhs));
+        }
+
+        return expr;
+    }
+
+    fn and(&mut self) -> Box<dyn Expr> {
+        let mut expr: Box<dyn Expr> = self.equality();
+
+        while self.expect(&[TokenType::And]) {
+            let op: Token = self.back();
+            let rhs: Box<dyn Expr> = self.equality();
+            expr = Box::new(Logical::new(expr, op, rhs)); 
+        }
+
+        return expr;
     }
 
     fn equality(&mut self) -> Box<dyn Expr> {

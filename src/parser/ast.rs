@@ -8,12 +8,15 @@ pub trait Visitor {
     fn visit_grouping(&mut self, grouping: &Grouping) -> Value;
     fn visit_literal(&self, literal: &Literal) -> Value;
     fn visit_unary(&mut self, unary: &Unary) -> Value;
+    fn visit_logical(&mut self, logical: &Logical) -> Value;
     fn visit_variable(&self, variable: &Variable) -> Value;
     fn visit_assign(&mut self, assign: &Assign) -> Value;
 
     fn visit_expr_stmt(&mut self, expr: &Expression);
     fn visit_echo_stmt(&mut self, echo: &Echo);
     fn visit_block_stmt(&mut self, block: &Block);
+    fn visit_if_stmt(&mut self, if_: &If);
+    fn visit_while_stmt(&mut self, while_: &While);
     
     fn visit_var_decl(&mut self, var: &Var);
 }
@@ -77,6 +80,27 @@ impl Expr for Literal {
     }
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+pub struct Logical {
+    pub lhs: Box<dyn Expr>,
+    pub op: Token,
+    pub rhs: Box<dyn Expr>,
+}
+
+impl Logical {
+    pub fn new(lhs: Box<dyn Expr>, op: Token, rhs: Box<dyn Expr>) -> Self {
+        Self { lhs, op, rhs }
+    }
+}
+
+impl Expr for Logical {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Value {
+        visitor.visit_logical(self)
+    }
+    fn as_any(&self) -> &dyn Any {
+        self 
     }
 }
 
@@ -221,5 +245,42 @@ impl Block {
 impl Stmt for Block {
     fn accept(&self, visitor: &mut dyn Visitor) {
         visitor.visit_block_stmt(self);
+    }
+}
+
+pub struct If {
+    pub condition: Box<dyn Expr>,
+    pub then_branch: Box<dyn Stmt>,
+    pub else_branch: Option<Box<dyn Stmt>>
+}
+
+impl If {
+    pub fn new(if_: Box<dyn Expr>, then: Box<dyn Stmt>, else_: Option<Box<dyn Stmt>>) -> Self {
+        Self {
+            condition: if_, then_branch: then, else_branch: else_
+        }
+    }
+}
+
+impl Stmt for If {
+    fn accept(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_if_stmt(self);
+    }
+}
+
+pub struct While {
+    pub condition: Box<dyn Expr>,
+    pub body: Box<dyn Stmt>
+}
+
+impl While {
+    pub fn new(condition: Box<dyn Expr>, body: Box<dyn Stmt>) -> Self {
+        Self { condition, body }
+    }
+}
+
+impl Stmt for While {
+    fn accept(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_while_stmt(self);
     }
 }

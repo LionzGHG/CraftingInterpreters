@@ -2,6 +2,7 @@
 use std::{collections::HashMap};
 
 use crate::{lexer::tokens::Token, util::{error::Error, Value}};
+use crate::util::error_formatter::*;
 
 #[derive(Clone, Debug)]
 //                   datatype         , value            , mutability        
@@ -11,6 +12,7 @@ pub struct VarAttrib(pub Option<Token>, pub Option<Value>, pub bool);
 pub struct Environment {
     pub map: HashMap<String, VarAttrib>,
     pub enclosing: Option<Box<Self>>,
+    error_handler: ErrorHandler,
 }
 
 impl Environment {
@@ -19,6 +21,7 @@ impl Environment {
         Self {
             map: HashMap::new(),
             enclosing: None,
+            error_handler: ErrorHandler,
         }
     }
 
@@ -26,6 +29,7 @@ impl Environment {
         Self {
             map: HashMap::new(),
             enclosing: Some(Box::new(enclosing)),
+            error_handler: ErrorHandler
         }
     }
 
@@ -46,7 +50,7 @@ impl Environment {
             return n.get(name);
         }
 
-        Error::undefined_var(name);
+        self.error_handler.throw(ErrorKind::UndefinedVar(name));
     } 
 
     pub fn assign(&mut self, name: Token, value: &Value) {
@@ -56,7 +60,7 @@ impl Environment {
                 self.map.insert(name.lexeme, VarAttrib(var_attrib.0.clone(), Some(value.clone()), var_attrib.2));
                 return;
             } else {
-                Error::immutable_var(name.lexeme);
+                self.error_handler.throw(ErrorKind::ImmutableVar(name.clone(), name.lexeme));
             }
         }
 
@@ -65,6 +69,6 @@ impl Environment {
             return;
         }
 
-        Error::undefined_var(name.clone());
+        self.error_handler.throw(ErrorKind::UndefinedVar(name.clone()));
     }
 }

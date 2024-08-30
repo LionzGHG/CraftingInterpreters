@@ -31,6 +31,7 @@ pub struct Lexer {
     start: usize,
     current: usize,
     line: usize,
+    row: usize,
     keywords: HashMap<&'static str, TokenType>
 }
 
@@ -42,6 +43,7 @@ impl Lexer {
             start: 0,
             current: 0,
             line: 1,
+            row: 0,
             keywords: map! {
                 "mut" => TokenType::Mut,
                 "typeof" => TokenType::Typeof,
@@ -94,7 +96,9 @@ impl Lexer {
                 "vararg" => TokenType::Vararg,
                 "varargs" => TokenType::Varargs,
                 "test" => TokenType::Test,
-                "move" => TokenType::Move
+                "move" => TokenType::Move,
+                "and" => TokenType::And,
+                "or" => TokenType::Or
             }
         }
     }
@@ -105,7 +109,7 @@ impl Lexer {
             self.scan_token();
         }
 
-        self.tokens.push(Token::new(TokenType::EOF, "".to_string(), None, self.line));
+        self.tokens.push(Token::new(TokenType::EOF, "".to_string(), None, self.line, self.row));
         return self.tokens.clone();
     }
 
@@ -116,6 +120,7 @@ impl Lexer {
     fn next(&mut self) -> char {
         let c: char = self.source.chars().nth(self.current).unwrap();
         self.current += 1;
+        self.row += 1;
         c
     }
 
@@ -125,7 +130,7 @@ impl Lexer {
 
     fn add_token_lit(&mut self, type_: TokenType, literal: Option<Value>) {
         let text: String = self.source[self.start..self.current].to_string();
-        self.tokens.push(Token::new(type_, text, literal, self.line));
+        self.tokens.push(Token::new(type_, text.clone(), literal, self.line, self.row));
     }
 
     fn expect(&mut self, expected: char) -> bool {
@@ -136,6 +141,7 @@ impl Lexer {
             return false;
         }
         self.current += 1;
+        self.row += 1;
         return true;
     }
 
@@ -155,6 +161,7 @@ impl Lexer {
 
     fn scan_token(&mut self) {
         println!("Checking: {}", self.source.chars().nth(self.current).unwrap());
+        println!("row: {}", self.row);
 
         let c: char = self.next();
         match c {
@@ -212,7 +219,10 @@ impl Lexer {
                 _ => self.add_token(TokenType::Less)
             }
             ' ' | '\r' | '\t' => {},
-            '\n' => self.line += 1,
+            '\n' => {
+                self.line += 1;
+                self.row = 0;
+            },
             '"' => self.string(),
             _ if is_digit(c) => self.number(),
             _ if is_alpha(c) => self.identifier(),

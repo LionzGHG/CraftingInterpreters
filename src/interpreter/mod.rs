@@ -2,13 +2,14 @@ use std::{any::{type_name_of_val, TypeId}, collections::HashMap, io};
 
 use environment::{Environment, VarAttrib};
 
-use crate::{lexer::tokens::{Token, TokenType}, parser::ast::{Expr, Stmt, Visitor}, /*util::{downcast_obj, downcast_to, downcast_to_f64, Number, Object*/};
+use crate::{lexer::tokens::{Token, TokenType}, parser::ast::{Expr, Stmt, Visitor}, util::error_formatter::{ErrorHandler, ErrorKind}, /*util::{downcast_obj, downcast_to, downcast_to_f64, Number, Object*/};
 use crate::util::{Value, error::Error};
 
 pub mod environment;
 
 pub struct Interpreter {
-    environment: Environment
+    environment: Environment,
+    error_handler: ErrorHandler
 }
 
 impl Interpreter {
@@ -16,6 +17,7 @@ impl Interpreter {
     pub fn new() -> Self {
         Self {
             environment: Environment::new(),
+            error_handler: ErrorHandler
         }
     }
 
@@ -63,6 +65,22 @@ impl Visitor for Interpreter {
         return self.evaluate(&*grouping.expression);
     }
 
+    fn visit_logical(&mut self, logical: &crate::parser::ast::Logical) -> Value {
+        let left: Value = self.evaluate(&*logical.lhs);
+
+        if logical.op.type_ == TokenType::Or {
+            if self.is_truthy(left.clone()) {
+                return left;
+            }
+        } else {
+            if !self.is_truthy(left.clone()) {
+                return left;
+            }
+        }
+
+        return self.evaluate(&*logical.rhs);
+    }
+
     fn visit_unary(&mut self, unary: &crate::parser::ast::Unary) -> Value {
         let right: Value = self.evaluate(&*unary.right);
 
@@ -71,12 +89,12 @@ impl Visitor for Interpreter {
                 if let Value::Float(value) = right {
                     return Value::Float(-value);
                 }
-                Error::number_operand(unary.operator.line);
+                self.error_handler.throw(ErrorKind::NumberOperand(unary.operator.clone()));
             },
             TokenType::Bang => {
                 return Value::Boolean(!self.is_truthy(right));
             },
-            _ => Error::unexpected_token(unary.operator.line, unary.operator.type_),
+            _ => self.error_handler.throw(ErrorKind::UnkownToken(unary.operator.clone())),
         }
     }
 
@@ -109,7 +127,7 @@ impl Visitor for Interpreter {
             TokenType::EqualEqual => Value::Boolean(x==y),
             TokenType::BangEqual => Value::Boolean(x!=y),
             // else
-            _ => Error::unexpected_token(binary.operator.line, binary.operator.type_),
+            _ => self.error_handler.throw(ErrorKind::UnkownToken(binary.operator.clone())),
         }
     }
 
@@ -137,6 +155,24 @@ impl Visitor for Interpreter {
         self.execute_block(&block.statements, Environment::with_enclosing(self.environment.clone()));
     }
 
+    fn visit_if_stmt(&mut self, if_: &crate::parser::ast::If) {
+        let temp: Value = if_.condition.accept(self);
+        if self.is_truthy(temp) {
+            if_.then_branch.accept(self);
+        } else if if_.else_branch.is_some() {
+            if let Some(stmt) = &if_.else_branch {
+                stmt.accept(self);
+            }
+        } 
+    }
+
+    fn visit_while_stmt(&mut self, while_: &crate::parser::ast::While) {
+        let value: Value = self.evaluate(&*while_.condition);
+        while self.is_truthy(value.clone()) {
+            while_.body.accept(self);
+        }
+    }
+
     fn visit_var_decl(&mut self, var: &crate::parser::ast::Var) {
         let mut value: Option<Value> = None;
         if let Some(n) = &var.expr {
@@ -157,25 +193,25 @@ impl Interpreter {
             if let TokenType::Identifier = type_.type_ {
                 if let Some(value) = value {
                     if value.is_i32() {
-                        self.assert_type(&type_.lexeme, &["i32", "u32"]);
+                        self.assert_type(type_, &type_.lexeme, &["i32", "u32"]);
                     }
                     if value.is_f64() {
-                        self.assert_type(&type_.lexeme, &["f64", "f32"]);
+                        self.assert_type(type_, &type_.lexeme, &["f64", "f32"]);
                     }
                     if value.is_boolean() {
-                        self.assert_type(&type_.lexeme, &["boolean"]);
+                        self.assert_type(type_, &type_.lexeme, &["boolean"]);
                     }
                     if value.is_string() {
-                        self.assert_type(&type_.lexeme, &["String", "string"]);
+                        self.assert_type(type_, &type_.lexeme, &["String", "string"]);
                     }
                 }
             }
         }
     }
 
-    fn assert_type(&self, input: &String, expected: &[&str]) {
+    fn assert_type(&self, token: &Token, input: &String, expected: &[&str]) {
         if !expected.contains(&input.as_str()) {
-            Error::type_mismatch(&input, &expected);
+            self.error_handler.throw(ErrorKind::TypeMismatch(token.clone(), input.clone(), expected.iter().map(|x| x.to_string()).collect()));
         }
     }
 }

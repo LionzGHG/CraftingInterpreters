@@ -1,4 +1,8 @@
 expression -> equality ;
+assignment -> IDENTIFIER "=" assignment
+            | logical_or ;
+logical_or -> logical_and ( "or" logical_and )* ;
+logical_and -> equality ( "and" equality )* ;
 equality -> comparison ( ( "!=" | "==" ) comparison )* ;
 comparison -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term -> factor ( ( "-" | "+" ) factor )* ;
@@ -12,13 +16,24 @@ program -> declaration* EOF ;
 declaration -> varDecl
             | statment ;
 
+
 statement -> exprStmt 
-            | echoStmt ;
+            | echoStmt
+            | ifStmt
+            | whileStmt
+            | block ;
 
 block -> "{" declaration* "}" ;
 
 varDecl -> ("set" | IDENTIFIER) ( "mut" )? IDENTIFIER ( "=" expression )? ";" ;
 
+ifStmt -> "if" "(" expression ")" statement ( "else" statement )? ;
+
+whileStmt -> "while" "(" expression ")" statement ;
+
+forStmt -> "for" "(" ( IDENTIFIER "in" )? (range | IDENTIFIER) ")" statement ;
+range -> NUMBER ".." NUMBER ;
 
 exprStmt -> expression ";" ;
+
 echoStmt -> "echo" expression ";";
